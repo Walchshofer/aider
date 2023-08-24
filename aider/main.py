@@ -14,6 +14,19 @@ from aider.repo import GitRepo
 from aider.versioncheck import check_version
 
 from .dump import dump  # noqa: F401
+from dotenv import load_dotenv
+import os
+import openai
+
+# Load environment variables
+load_dotenv()
+
+# Retrieve and set OpenAI API settings
+openai_api_key = os.getenv('OPENAI_API_KEY')
+openai_api_base = os.getenv('OPENAI_API_BASE')
+model_name = os.getenv('MODEL_NAME')
+openai.api_key = openai_api_key
+openai.api_base = openai_api_base
 
 
 def get_git_root():
@@ -133,14 +146,15 @@ def main(argv=None, input=None, output=None, force_git_root=None):
     core_group.add_argument(
         "--openai-api-key",
         metavar="OPENAI_API_KEY",
-        help="Specify the OpenAI API key",
+        default=openai_api_key,  # Set the default value
+        help="Specify the OpenAI API key (default loaded from .env file)",
         env_var="OPENAI_API_KEY",
     )
     core_group.add_argument(
         "--model",
         metavar="MODEL",
-        default=models.GPT4.name,
-        help=f"Specify the model to use for the main chat (default: {models.GPT4.name})",
+        default=models.CUSTOM_MODEL.name,  # Use the custom model name as the default
+        help=f"Specify the model to use for the main chat (default: {models.CUSTOM_MODEL.name})",
     )
     core_group.add_argument(
         "-3",
@@ -161,7 +175,8 @@ def main(argv=None, input=None, output=None, force_git_root=None):
     model_group.add_argument(
         "--openai-api-base",
         metavar="OPENAI_API_BASE",
-        help="Specify the openai.api_base (default: https://api.openai.com/v1)",
+        default=openai_api_base,  # Use the value from .env as the default
+        help=f"Specify the openai.api_base (default: {openai_api_base})",
     )
     model_group.add_argument(
         "--openai-api-type",
@@ -438,7 +453,12 @@ def main(argv=None, input=None, output=None, force_git_root=None):
 
     io.tool_output(*sys.argv, log_only=True)
 
-    if not args.openai_api_key:
+ # Check if OpenAI API key is provided through command-line argument or .env file
+if args.openai_api_key is not None:
+    openai.api_key = args.openai_api_key
+    io.tool_output(f"Setting openai.api_key from command-line argument.")
+else:
+    if openai_api_key is None:
         if os.name == "nt":
             io.tool_error(
                 "No OpenAI API key provided. Use --openai-api-key or setx OPENAI_API_KEY."
@@ -448,17 +468,29 @@ def main(argv=None, input=None, output=None, force_git_root=None):
                 "No OpenAI API key provided. Use --openai-api-key or export OPENAI_API_KEY."
             )
         return 1
+    openai.api_key = openai_api_key
+    io.tool_output(f"Setting openai.api_key from .env file.")
 
-    main_model = models.Model(args.model)
+    # Check if model is provided through command-line argument or .env file
+    main_model = models.Model(args.model if args.model else model_name)
 
-    openai.api_key = args.openai_api_key
-    for attr in ("base", "type", "version", "deployment_id", "engine"):
+    # Check if OpenAI API base is provided through command-line argument or .env file
+    if args.openai_api_base is not None:
+        openai.api_base = args.openai_api_base
+        io.tool_output(f"Setting openai.api_base from command-line argument.")
+    else:
+        openai.api_base = openai_api_base
+        io.tool_output(f"Setting openai.api_base from .env file.")
+
+    # Setting other OpenAI API attributes
+    for attr in ("type", "version", "deployment_id", "engine"):
         arg_key = f"openai_api_{attr}"
         val = getattr(args, arg_key)
         if val is not None:
             mod_key = f"api_{attr}"
             setattr(openai, mod_key, val)
             io.tool_output(f"Setting openai.{mod_key}={val}")
+
 
     try:
         coder = Coder.create(

@@ -1,8 +1,16 @@
 import re
+import os
+from dotenv import load_dotenv
 
+# Load environment variables
+load_dotenv()
+
+# Retrieve and set MODEL_NAME
+MODEL_NAME = os.getenv('MODEL_NAME')
 known_tokens = {
     "gpt-3.5-turbo": 4,
     "gpt-4": 8,
+    MODEL_NAME: 8  # You can set this to the appropriate token size for your custom model
 }
 
 
@@ -70,7 +78,10 @@ class Model:
     def __str__(self):
         return self.name
 
-
+    def is_custom_model(self):
+        return self.name == MODEL_NAME
+    
 GPT4 = Model("gpt-4")
 GPT35 = Model("gpt-3.5-turbo")
 GPT35_16k = Model("gpt-3.5-turbo-16k")
+CUSTOM_MODEL = Model(MODEL_NAME)

@@ -7,6 +7,7 @@ load_dotenv()
 
 # Retrieve and set MODEL_NAME
 MODEL_NAME = os.getenv('MODEL_NAME')
+#print("DEBUG: MODEL_NAME =", MODEL_NAME)
 known_tokens = {
     "gpt-3.5-turbo": 4,
     "gpt-4": 8,
@@ -40,6 +41,23 @@ class Model:
 
         self.max_context_tokens = tokens * 1024
 
+        if self.is_custom_model():
+            #self.edit_format = "diff"
+            #self.use_repo_map = True
+            #self.send_undo_reply = True
+            self.edit_format = "whole"
+            self.always_available = True
+            
+            #if tokens is not None:
+            if tokens == 4:
+                self.prompt_price = 0.00
+                self.completion_price = 0.00
+            elif tokens == 16:
+                self.prompt_price = 0.000
+                self.completion_price = 0.000
+            return
+        
+        
         if self.is_gpt4():
             self.edit_format = "diff"
             self.use_repo_map = True
@@ -67,6 +85,8 @@ class Model:
 
             return
 
+        
+        
         raise ValueError(f"Unsupported model: {name}")
 
     def is_gpt4(self):

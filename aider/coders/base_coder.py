@@ -59,27 +59,47 @@ class Coder:
     ):
         from . import EditBlockCoder, WholeFileCoder
 
+        # Debug print statement to show the initial value of main_model
+        #print("DEBUG: Initial main_model:", main_model)
+
         if not main_model:
             main_model = models.GPT35_16k
+            print("DEBUG: Setting main_model to default:", main_model)
+
+        # Debug print statement to show if the model is always available
+        #print("DEBUG: Is main_model always available?", main_model.always_available)
 
         if not main_model.always_available:
             if not check_model_availability(main_model):
-                if main_model != models.GPT4:
+                print("DEBUG: Model not available:", main_model)
+                if main_model != models.CUSTOM_MODEL:
                     io.tool_error(
                         f"API key does not support {main_model.name}, falling back to"
-                        f" {models.GPT35_16k.name}"
+                        f" {models.GPT35_16k.name} THATS A TEST"
                     )
+                    print("DEBUG: Falling back to default model:", models.GPT35_16k.name)
                 main_model = models.GPT35_16k
+
+        # Debug print statement to show the final value of main_model
+        #print("DEBUG: Final main_model:", main_model)
 
         if edit_format is None:
             edit_format = main_model.edit_format
+            #print("DEBUG: Setting edit_format to main_model's edit_format:", edit_format)
+
+        # Debug print statement to show the edit_format
+        #print("DEBUG: edit_format:", edit_format)
 
         if edit_format == "diff":
+            print("DEBUG: Using EditBlockCoder")
             return EditBlockCoder(main_model, io, **kwargs)
         elif edit_format == "whole":
+            print("DEBUG: Using WholeFileCoder")
             return WholeFileCoder(main_model, io, **kwargs)
         else:
+            print("DEBUG: Unknown edit_format:", edit_format)
             raise ValueError(f"Unknown edit format {edit_format}")
+
 
     def __init__(
         self,

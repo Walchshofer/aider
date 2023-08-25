@@ -6,11 +6,16 @@ from pathlib import Path
 
 import git
 import tiktoken
+from transformers import AutoTokenizer
 from prompt_toolkit.completion import Completion
 
 from aider import prompts, voice
 
 from .dump import dump  # noqa: F401
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 
 class Commands:
@@ -24,7 +29,26 @@ class Commands:
             voice_language = None
 
         self.voice_language = voice_language
-        self.tokenizer = tiktoken.encoding_for_model(coder.main_model.name)
+        
+        try:
+            if coder.main_model.is_custom_model():  # Assuming you have this method in your Model class
+                # Load model path and name from environment variables
+                model_path = os.getenv('MODEL_PATH')
+                model_name = os.getenv('MODEL_NAME')
+
+                if model_path and model_name:
+                    local_model_path = os.path.join(model_path, model_name)
+                    self.tokenizer = AutoTokenizer.from_pretrained(local_model_path)
+                else:
+                    io.tool_error("Model path or name not set in .env file. Please set both MODEL_PATH and MODEL_NAME.")
+                    sys.exit(1)
+            else:
+                self.tokenizer = tiktoken.encoding_for_model(coder.main_model.name)
+        except KeyError:
+            io.tool_error(f"Could not automatically map {coder.main_model.name} to a tokenizer.")
+            sys.exit(1)
+        
+        #self.tokenizer = tiktoken.encoding_for_model(coder.main_model.name)
 
     def is_command(self, inp):
         if inp[0] == "/":

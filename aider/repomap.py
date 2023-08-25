@@ -19,6 +19,9 @@ from tqdm import tqdm
 from aider import models
 
 from .dump import dump  # noqa: F402
+from dotenv import load_dotenv
+from transformers import AutoTokenizer
+load_dotenv()
 
 
 def to_tree(tags):
@@ -104,8 +107,17 @@ class RepoMap:
         else:
             self.use_ctags = False
 
-        self.tokenizer = tiktoken.encoding_for_model(main_model.name)
+        model_path = os.getenv('MODEL_PATH')
+        model_name = os.getenv('MODEL_NAME')
+
+        if model_path and model_name and 'gpt-4' not in model_name and 'gpt-3.5' not in model_name:
+            local_model_path = os.path.join(model_path, model_name)
+            self.tokenizer = AutoTokenizer.from_pretrained(local_model_path)
+        else:
+            self.tokenizer = tiktoken.encoding_for_model(main_model.name)
+
         self.repo_content_prefix = repo_content_prefix
+
 
     def get_repo_map(self, chat_files, other_files):
         res = self.choose_files_listing(chat_files, other_files)

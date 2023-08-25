@@ -453,34 +453,31 @@ def main(argv=None, input=None, output=None, force_git_root=None):
 
     io.tool_output(*sys.argv, log_only=True)
 
- # Check if OpenAI API key is provided through command-line argument or .env file
-if args.openai_api_key is not None:
-    openai.api_key = args.openai_api_key
-    io.tool_output(f"Setting openai.api_key from command-line argument.")
-else:
-    if openai_api_key is None:
-        if os.name == "nt":
-            io.tool_error(
-                "No OpenAI API key provided. Use --openai-api-key or setx OPENAI_API_KEY."
-            )
-        else:
-            io.tool_error(
-                "No OpenAI API key provided. Use --openai-api-key or export OPENAI_API_KEY."
-            )
+    # Check if OpenAI API key is provided through .env file or command-line argument
+    if openai_api_key is not None:
+        openai.api_key = openai_api_key
+        io.tool_output(f"Setting openai.api_key from .env file.")
+    elif args.openai_api_key is not None:
+        openai.api_key = args.openai_api_key
+        io.tool_output(f"Setting openai.api_key from command-line argument.")
+    else:
+        io.tool_error("No OpenAI API key provided. Use --openai-api-key or set it in the .env file.")
         return 1
-    openai.api_key = openai_api_key
-    io.tool_output(f"Setting openai.api_key from .env file.")
 
-    # Check if model is provided through command-line argument or .env file
-    main_model = models.Model(args.model if args.model else model_name)
-
-    # Check if OpenAI API base is provided through command-line argument or .env file
-    if args.openai_api_base is not None:
+    # Check if OpenAI API base is provided through .env file or command-line argument
+    if openai_api_base is not None:
+        openai.api_base = openai_api_base
+        io.tool_output(f"Setting openai.api_base from .env file.")
+    elif args.openai_api_base is not None:
         openai.api_base = args.openai_api_base
         io.tool_output(f"Setting openai.api_base from command-line argument.")
     else:
-        openai.api_base = openai_api_base
-        io.tool_output(f"Setting openai.api_base from .env file.")
+        io.tool_error("No OpenAI API base provided. Use --openai-api-base or set it in the .env file.")
+        return 1
+
+
+    # Check if model is provided through command-line argument or .env file
+    main_model = models.Model(args.model if args.model else model_name)
 
     # Setting other OpenAI API attributes
     for attr in ("type", "version", "deployment_id", "engine"):

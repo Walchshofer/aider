@@ -1,16 +1,27 @@
 import argparse
 import json
-
+import os
+from dotenv import load_dotenv
+from transformers import AutoTokenizer
 import tiktoken
 
 from aider import models, prompts
 from aider.dump import dump  # noqa: F401
 from aider.sendchat import simple_send_with_retries
 
-
 class ChatSummary:
-    def __init__(self, model=models.GPT35.name, max_tokens=1024):
-        self.tokenizer = tiktoken.encoding_for_model(model)
+    def __init__(self, model=models.CUSTOM_MODEL.name, max_tokens=8192):
+        self.model_name = model
+        self.max_tokens = max_tokens
+
+        if self.model_name.startswith("gpt-4") or self.model_name.startswith("gpt-3"):
+            self.tokenizer = tiktoken.encoding_for_model(model)
+        else:
+            # Load environment variables
+            load_dotenv()
+            model_path = os.getenv('MODEL_PATH')
+            model_name = os.getenv('MODEL_NAME')
+            self.tokenizer = AutoTokenizer.from_pretrained(os.path.join(model_path, model_name), local_files_only=True)
         self.max_tokens = max_tokens
 
     def too_big(self, messages):
@@ -85,11 +96,10 @@ class ChatSummary:
             dict(role="user", content=content),
         ]
 
-        summary = simple_send_with_retries(model=models.GPT35.name, messages=messages)
+        summary = simple_send_with_retries(model=models.CUSTOM_MODEL.name, messages=messages)
         summary = prompts.summary_prefix + summary
 
         return [dict(role="user", content=summary)]
-
 
 def main():
     parser = argparse.ArgumentParser()
@@ -123,10 +133,9 @@ def main():
 
         assistant.append(line)
 
-    summarizer = ChatSummary(models.GPT35.name)
+    summarizer = ChatSummary(models.CUSTOM_MODEL.name)
     summary = summarizer.summarize(messages[-40:])
     dump(summary)
-
 
 if __name__ == "__main__":
     main()
